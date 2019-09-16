@@ -12,8 +12,8 @@ class EmbryoscopeUtils:
 
     def extractImage(self, dest, well, timestep, focal, verbose = False):
         #Get single image (from well, timestep and focal)
-        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == " + \
-                 str(well) + " AND Run == " + str(timestep) + " AND Focal == " + str(focal))
+        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == ? AND Run == ? AND Focal == ?", \
+            (well, timestep, focal))
         self.saveImageRows(rows, dest, verbose)
 
     def extractImages(self, dest, verbose = False):
@@ -23,18 +23,19 @@ class EmbryoscopeUtils:
 
     def extractImageByTimestep(self, dest, well, timestep, verbose = False):
         #Get single image from well and timestep at all focuses
-        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == " + \
-                 str(well) + " AND Run == " + str(timestep))
+        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == ? AND Run == ?", \
+            (well, timestep))
         self.saveImageRows(rows, dest, verbose)
 
     def getParamsByName(self, param):
         #Returns a list of values of all params with this name
-        return list(map(lambda x: x[0], self.conn.execute('SELECT Val FROM GENERAL WHERE Par LIKE "' + \
-               str(param) + '"').fetchall()))
+        return list(map(lambda x: x[0], self.conn.execute('SELECT Val FROM GENERAL WHERE Par LIKE ?', \
+            (param, )).fetchall()))
 
     def getParamsByType(self, param):
         #Returns a list of tuples of key/values of all params with this type
-        return self.conn.execute('SELECT Par,Val FROM GENERAL WHERE Type LIKE "' + str(param) + '"').fetchall()
+        return self.conn.execute('SELECT Par,Val FROM GENERAL WHERE Type LIKE ?', \
+            (param, )).fetchall()
 
     def saveImageRows(self, rows, dest, verbose = False):
         #Saves all the rows from a query
@@ -46,7 +47,7 @@ class EmbryoscopeUtils:
             img = row[3]
             
             #Decide where to save
-            filename = os.path.join(dest, well + "_" + run + "_" + focal + ".jpg")      
+            filename = os.path.join(dest, "{}_{}_{}.jpg".format(well, run, focal))      
             if self.createDirectories:
                 dir = os.path.join(dest, well, run)
                 if not os.path.exists(dir):
