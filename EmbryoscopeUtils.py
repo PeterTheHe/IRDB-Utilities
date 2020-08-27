@@ -3,52 +3,61 @@
 import os
 import sqlite3
 
-class EmbryoscopeUtils:
 
-    def __init__(self, path, createDirectories = True):
-        #init driver
+class EmbryoscopeDB:
+
+    def __init__(self, path, create_directories=True):
+        # init connection
         self.conn = sqlite3.connect(path)
-        self.createDirectories = createDirectories
+        # should we create a folder structure for the output or just dump them all in the same folder
+        self.create_directories = create_directories
 
-    def extractImage(self, dest, well, timestep, focal, verbose = False):
-        #Get single image (from well, timestep and focal)
-        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == ? AND Run == ? AND Focal == ?", \
-            (well, timestep, focal))
-        self.saveImageRows(rows, dest, verbose)
+    """ Get single image (from well, timestep and focal) """
 
-    def extractImages(self, dest, verbose = False):
-        #Get images + sort into folders
+    def extract_image(self, dest, well, timestep, focal, verbose=False):
+        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == ? AND Run == ? AND Focal == ?",
+                                 (well, timestep, focal))
+        self.save_image_rows(rows, dest, verbose)
+
+    """ Get images + sort into folders """
+
+    def extract_images(self, dest, verbose=False):
         rows = self.conn.execute('SELECT Well,Run,Focal,Image FROM IMAGES')
-        self.saveImageRows(rows, dest, verbose)
+        self.save_image_rows(rows, dest, verbose)
 
-    def extractImageByTimestep(self, dest, well, timestep, verbose = False):
-        #Get single image from well and timestep at all focuses
-        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == ? AND Run == ?", \
-            (well, timestep))
-        self.saveImageRows(rows, dest, verbose)
+    """ Get single image from well and timestep at all focuses """
 
-    def getParamsByName(self, param):
-        #Returns a list of values of all params with this name
-        return list(map(lambda x: x[0], self.conn.execute('SELECT Val FROM GENERAL WHERE Par LIKE ?', \
-            (param, )).fetchall()))
+    def extract_image_by_timestep(self, dest, well, timestep, verbose=False):
+        rows = self.conn.execute("SELECT Well,Run,Focal,Image FROM IMAGES WHERE Well == ? AND Run == ?",
+                                 (well, timestep))
+        self.save_image_rows(rows, dest, verbose)
 
-    def getParamsByType(self, param):
-        #Returns a list of tuples of key/values of all params with this type
-        return self.conn.execute('SELECT Par,Val FROM GENERAL WHERE Type LIKE ?', \
-            (param, )).fetchall()
+    """ Return a list of values of all params with this name """
 
-    def saveImageRows(self, rows, dest, verbose = False):
-        #Saves all the rows from a query
+    def get_params_by_name(self, param):
+        return list(map(lambda x: x[0], self.conn.execute('SELECT Val FROM GENERAL WHERE Par LIKE ?',
+                                                          (param, )).fetchall()))
+
+    """ Return a list of tuples of key/values of all params with this type """
+
+    def get_params_by_type(self, param):
+        return self.conn.execute('SELECT Par,Val FROM GENERAL WHERE Type LIKE ?',
+                                 (param, )).fetchall()
+
+    """ Save all the rows from a query """
+
+    def save_image_rows(self, rows, dest, verbose=False):
         for row in rows:
-            #extract data
+            # extract data
             well = str(row[0])
             run = str(row[1])
             focal = str(row[2])
             img = row[3]
-            
-            #Decide where to save
-            filename = os.path.join(dest, "{}_{}_{}.jpg".format(well, run, focal))      
-            if self.createDirectories:
+
+            # decide where to save
+            filename = os.path.join(
+                dest, "{}_{}_{}.jpg".format(well, run, focal))
+            if self.create_directories:
                 dir = os.path.join(dest, well, run)
                 if not os.path.exists(dir):
                     os.makedirs(dir)
@@ -56,7 +65,7 @@ class EmbryoscopeUtils:
 
             if verbose:
                 print('Extracting to ' + filename)
-            #write to file
+            # write to file
             f = open(filename, 'wb')
             f.write(img)
             f.close()
@@ -70,10 +79,15 @@ class EmbryoscopeUtils:
 
 
 if __name__ == '__main__':
-    # Sample usage
+    # sample usage
     path = input('Database path: ')
     output = input("Give an EMPTY directory to extract images to: ")
-    eu = EmbryoscopeUtils(path, False)
-    print('Working on data from PatientIDx ' + str(eu.getParamsByName('PatientIDx')[0]))
-    #eu.extractImages(output, True)
-    eu.extractImageByTimestep(output, well=3, timestep=2, verbose=True)
+    # connect to db
+    db = EmbryoscopeDB(path, create_directories=False)
+    # extract PatientIDx param
+    print('Working on data from PatientIDx ' +
+          str(db.get_params_by_name('PatientIDx')[0]))
+    # extract images from a specific well
+    db.extract_image_by_timestep(output, well=3, timestep=2, verbose=True)
+    # uncomment below to extract all the images in the db
+    # db.extractImages(output)
