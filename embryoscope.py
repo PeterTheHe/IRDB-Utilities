@@ -84,9 +84,6 @@ if __name__ == '__main__':
     output = input("Give an EMPTY directory to extract images to: ")
     # connect to db
     db = EmbryoscopeDB(path, create_directories=False)
-    # extract PatientIDx param
-    print('Working on data from PatientIDx ' +
-          str(db.get_params_by_name('PatientIDx')[0]))
     # extract images from a specific well
     db.extract_image_by_timestep(output, well=3, timestep=2, verbose=True)
     # uncomment below to extract all the images in the db
